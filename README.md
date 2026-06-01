@@ -35,5 +35,5 @@ npm run dev
 
 ## Run on Local Network (Mobile Testing)
 ```
-http://YOUR_LOCAL_IP:5173
+https://YOUR_LOCAL_IP:5173
 ```
