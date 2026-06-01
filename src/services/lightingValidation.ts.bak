@@ -1,0 +1,197 @@
+/**
+ * lightingValidation.ts
+ * Pixel-based brightness, overexposure, and backlight detection.
+ *
+ * Threshold config: src/config/validationConfig.ts → lighting section
+ *   minBrightness                   : avg luma below → "too dark"
+ *   maxBrightness                   : avg luma above → "too bright"
+ *   maxOverexposedRatio             : overexposed pixel fraction → warning
+ *   backlight.enabled               : toggle backlight detection
+ *   backlight.maxBackgroundToPersonRatio      : bg/person luma ratio → backlit
+ *   backlight.minBackgroundMinusPersonDelta   : bg−person delta → backlit
+ *   backlight.maxDarkPersonPixelRatio         : dark-pixel fraction in body area
+ *   backlight.minPersonLuminance              : threshold for "dark" pixel
+ *
+ * Backlight detection strategy:
+ *   After pose detection provides landmarks we can compute:
+ *     • Person region luma (using bounding box of visible landmarks)
+ *     • Background region luma (remainder of the image)
+ *   If background is significantly brighter than the person → backlit.
+ *
+ *   When called without landmarks (early lighting check), falls back to the
+ *   simple highlight/shadow heuristic from v1.
+ */
+
+import type { NormalizedLandmark, ValidationError } from '../types/validation';
+import type { AppConfig } from '../types/models';
+import { computeLuminanceStats, imageToCanvas, getPixelData } from '../utils/imageUtils';
+import { landmarksBBox } from '../utils/geometryUtils';
+
+export interface LightingResult {
+  averageLuminance: number;
+  overexposedRatio: number;
+  personLuminance: number | null;    // null if landmarks unavailable
+  backgroundLuminance: number | null;
+  errors: ValidationError[];
+  warnings: ValidationError[];
+}
+
+/**
+ * Full lighting validation.
+ * Pass landmarks to enable accurate backlight detection using the pose bbox.
+ */
+export function validateLighting(
+  image: HTMLImageElement | HTMLVideoElement | HTMLCanvasElement,
+  config: AppConfig,
+  landmarks?: NormalizedLandmark[]
+): LightingResult {
+  const canvas = imageToCanvas(image, 320);
+  const pixels = getPixelData(canvas);
+  const { averageLuminance, overexposedRatio } = computeLuminanceStats(pixels);
+
+  const errors: ValidationError[] = [];
+  const warnings: ValidationError[] = [];
+  let personLuminance: number | null = null;
+  let backgroundLuminance: number | null = null;
+
+  const {
+    minBrightness,
+    maxBrightness,
+    maxOverexposedRatio,
+    backlight: bl,
+  } = config.lighting;
+
+  // ── Scene brightness ────────────────────────────────────────────────────────
+  if (averageLuminance < minBrightness) {
+    errors.push({
+      code: 'TOO_DARK',
+      message: 'The image is too dark. Please take the photo in better lighting.',
+      severity: 'error',
+    });
+  } else if (averageLuminance > maxBrightness) {
+    errors.push({
+      code: 'TOO_BRIGHT',
+      message: 'The image is too bright. Please avoid strong direct light.',
+      severity: 'error',
+    });
+  }
+
+  // Overexposed pixels warning (only when scene isn't globally too bright)
+  if (overexposedRatio > maxOverexposedRatio && averageLuminance <= maxBrightness) {
+    warnings.push({
+      code: 'OVEREXPOSED',
+      message: 'Parts of the image are overexposed. Try to avoid harsh direct lighting.',
+      severity: 'warning',
+    });
+  }
+
+  // ── Backlight detection ─────────────────────────────────────────────────────
+  if (bl.enabled) {
+    if (landmarks && landmarks.length > 0) {
+      // Accurate path: use pose bbox for person vs background regions
+      const visible = landmarks.filter(
+        (lm) => (lm.visibility ?? 0) >= config.confidence.minLandmarkVisibility
+      );
+
+      if (visible.length >= 4) {
+        const bbox = landmarksBBox(visible);
+        const result = computeRegionLuminance(pixels, canvas.width, canvas.height, bbox);
+        personLuminance = result.person;
+        backgroundLuminance = result.background;
+
+        const ratio = backgroundLuminance / Math.max(personLuminance, 1);
+        const delta = backgroundLuminance - personLuminance;
+
+        if (
+          ratio > bl.maxBackgroundToPersonRatio ||
+          delta > bl.minBackgroundMinusPersonDelta
+        ) {
+          errors.push({
+            code: 'BACKLIT',
+            message:
+              'Strong backlight detected. Please face the light source or move away from the bright background.',
+            severity: 'error',
+          });
+        }
+
+        // Also check fraction of dark pixels inside person bbox
+        if (!errors.some((e) => e.code === 'BACKLIT') && result.darkPersonRatio > bl.maxDarkPersonPixelRatio) {
+          errors.push({
+            code: 'BACKLIT',
+            message:
+              'Strong backlight detected. The person appears too dark — face the light source.',
+            severity: 'error',
+          });
+        }
+      }
+    } else {
+      // Fallback: simple shadow+highlight heuristic (no landmarks)
+      if (averageLuminance < 90 && overexposedRatio > 0.05) {
+        errors.push({
+          code: 'BACKLIT',
+          message:
+            'You appear to be backlit. Please face a light source instead of standing in front of one.',
+          severity: 'error',
+        });
+      }
+    }
+  }
+
+  return {
+    averageLuminance,
+    overexposedRatio,
+    personLuminance,
+    backgroundLuminance,
+    errors,
+    warnings,
+  };
+}
+
+// ── Region luminance helper ────────────────────────────────────────────────────
+
+interface RegionLuminance {
+  person: number;
+  background: number;
+  darkPersonRatio: number;
+}
+
+function computeRegionLuminance(
+  pixels: ImageData,
+  w: number,
+  h: number,
+  bbox: { minX: number; minY: number; maxX: number; maxY: number }
+): RegionLuminance {
+  const { data } = pixels;
+  // Expand bbox a little for robustness
+  const pad = 0.03;
+  const x0 = Math.max(0, Math.floor((bbox.minX - pad) * w));
+  const y0 = Math.max(0, Math.floor((bbox.minY - pad) * h));
+  const x1 = Math.min(w - 1, Math.ceil((bbox.maxX + pad) * w));
+  const y1 = Math.min(h - 1, Math.ceil((bbox.maxY + pad) * h));
+
+  let personSum = 0, personCount = 0, darkPerson = 0;
+  let bgSum = 0, bgCount = 0;
+  const darkThreshold = 55; // same as bl.minPersonLuminance default
+
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const i = (y * w + x) * 4;
+      const luma = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+
+      if (x >= x0 && x <= x1 && y >= y0 && y <= y1) {
+        personSum += luma;
+        personCount++;
+        if (luma < darkThreshold) darkPerson++;
+      } else {
+        bgSum += luma;
+        bgCount++;
+      }
+    }
+  }
+
+  const person = personCount > 0 ? personSum / personCount : 128;
+  const background = bgCount > 0 ? bgSum / bgCount : 128;
+  const darkPersonRatio = personCount > 0 ? darkPerson / personCount : 0;
+
+  return { person, background, darkPersonRatio };
+}

@@ -1,0 +1,77 @@
+import {
+  PoseLandmarker,
+  FilesetResolver,
+  type PoseLandmarkerResult,
+} from '@mediapipe/tasks-vision';
+import type { AppConfig } from '../types/models';
+
+let landmarker: PoseLandmarker | null = null;
+let loading = false;
+let loadError: string | null = null;
+const loadListeners: Array<() => void> = [];
+
+export async function getPoseLandmarker(config: AppConfig): Promise<PoseLandmarker> {
+  if (landmarker) return landmarker;
+  if (loadError) throw new Error(loadError);
+
+  if (loading) {
+    await new Promise<void>((resolve) => loadListeners.push(resolve));
+    if (loadError) throw new Error(loadError);
+    return landmarker!;
+  }
+
+  loading = true;
+
+  try {
+    const vision = await FilesetResolver.forVisionTasks(
+      'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm'
+    );
+
+    const modelPath = config.model.useCustomPoseModel && config.model.customPoseModelUrl
+      ? config.model.customPoseModelUrl
+      : config.model.poseLandmarkerModelPath;
+
+    landmarker = await PoseLandmarker.createFromOptions(vision, {
+      baseOptions: {
+        modelAssetPath: modelPath,
+        delegate: 'CPU',
+      },
+      runningMode: 'IMAGE',
+      numPoses: 2,
+      minPoseDetectionConfidence: 0.4,
+      minPosePresenceConfidence: 0.4,
+      minTrackingConfidence: 0.4,
+    });
+
+    loadListeners.forEach((cb) => cb());
+    return landmarker;
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    loadError = `Failed to load pose model: ${msg}`;
+    loadListeners.forEach((cb) => cb());
+    throw new Error(loadError);
+  } finally {
+    loading = false;
+  }
+}
+
+export function isModelReady(): boolean { return landmarker !== null; }
+export function getModelLoadError(): string | null { return loadError; }
+
+export async function detectPose(
+  image: HTMLImageElement | HTMLVideoElement | HTMLCanvasElement,
+  config: AppConfig,
+  _timestamp?: number
+): Promise<PoseLandmarkerResult> {
+  const lm = await getPoseLandmarker(config);
+
+  if (image instanceof HTMLVideoElement) {
+    const canvas = document.createElement('canvas');
+    canvas.width  = image.videoWidth  || 640;
+    canvas.height = image.videoHeight || 480;
+    canvas.getContext('2d')!.drawImage(image, 0, 0);
+    return lm.detect(canvas);
+  }
+
+  return lm.detect(image as HTMLImageElement | HTMLCanvasElement);
+}

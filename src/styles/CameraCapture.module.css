@@ -1,0 +1,314 @@
+/* CameraCapture.module.css */
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+/* ── Preview box ─────────────────────────────────────────────────── */
+.preview {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  aspect-ratio: 9 / 16;
+  background: #000;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1.5px solid #2e3350;
+}
+
+.video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.2s ease;
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.frameGuide {
+  position: absolute;
+  top: 4%;
+  left: 18%;
+  width: 64%;
+  height: 90%;
+  border: 2px dashed rgba(79,142,247,0.45);
+  border-radius: 8px;
+  pointer-events: none;
+}
+
+
+/* ── Sensor pitch indicator ────────────────────────────────────────── */
+.pitchIndicator {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 3;
+  min-width: 116px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.58);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(6px);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.28);
+  pointer-events: none;
+}
+.pitchIndicatorTop {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.76rem;
+  font-weight: 800;
+  margin-bottom: 2px;
+}
+.pitchIndicatorValue {
+  font-size: 0.72rem;
+  opacity: 0.92;
+  margin-bottom: 6px;
+}
+.pitchBar {
+  position: relative;
+  height: 5px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(239,68,68,0.9), rgba(34,197,94,0.9), rgba(239,68,68,0.9));
+  overflow: hidden;
+}
+.pitchBarNeedle {
+  position: absolute;
+  top: -3px;
+  width: 3px;
+  height: 11px;
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: 0 0 6px rgba(0,0,0,0.65);
+  transform: translateX(-50%);
+}
+.pitchOk { border-color: rgba(34,197,94,0.75); }
+.pitchWarn { border-color: rgba(245,158,11,0.85); }
+.pitchBad { border-color: rgba(239,68,68,0.90); }
+.pitchUnknown { border-color: rgba(148,163,184,0.65); }
+
+.pitchPermissionBtn {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 4;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.25);
+  background: rgba(30, 64, 175, 0.82);
+  color: #fff;
+  font-size: 0.76rem;
+  font-weight: 800;
+  box-shadow: 0 8px 22px rgba(0,0,0,0.28);
+}
+
+/* ── Hint bar ───────────────────────────────────────────────────────── */
+.hint {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 10px 12px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-align: center;
+  backdrop-filter: blur(6px);
+}
+.hintGood { background: rgba(34,197,94,0.80); color: #fff; }
+.hintWarn { background: rgba(245,158,11,0.80); color: #fff; }
+.hintBad  { background: rgba(30,30,40,0.80);  color: #e8eaf6; }
+.hintCount { opacity: 0.75; font-size: 0.78rem; }
+
+/* ── Hold still message directly on preview ───────────────────────── */
+.holdStillOverlay {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 3;
+  width: min(78%, 340px);
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.62);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #fff;
+  text-align: center;
+  backdrop-filter: blur(6px);
+  pointer-events: none;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+.holdStillTitle {
+  font-size: 1.25rem;
+  font-weight: 800;
+  margin-bottom: 4px;
+}
+.holdStillSub {
+  font-size: 0.86rem;
+  opacity: 0.92;
+}
+
+/* ── Auto-capture progress bar ──────────────────────────────────────── */
+.progressBar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: rgba(0,0,0,0.3);
+}
+.progressFill {
+  height: 100%;
+  background: #22c55e;
+  transition: width 0.25s ease;
+  border-radius: 0 2px 2px 0;
+}
+
+/* ── Camera switch ─────────────────────────────────────────────────── */
+.switchBtn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.55);
+  border: 1.5px solid rgba(255,255,255,0.2);
+  color: #fff;
+  font-size: 1.1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(4px);
+  transition: opacity 0.15s;
+  z-index: 2;
+}
+.switchBtn:hover   { opacity: 0.8; }
+.switchBtn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ── Hint list (expanded) ───────────────────────────────────────────── */
+.hintList {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.hintItem {
+  padding: 7px 10px;
+  border-radius: 7px;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+.hintItemOk  { background: rgba(34,197,94,0.12);  color: #86efac; }
+.hintItemWarn { background: rgba(245,158,11,0.12); color: #fcd34d; }
+.hintItemErr { background: rgba(239,68,68,0.12);  color: #fca5a5; }
+
+/* ── Zoom controls ──────────────────────────────────────────────────── */
+.zoomRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 4px 0;
+}
+.zoomLabel {
+  font-size: 0.82rem;
+  color: #8891b0;
+  white-space: nowrap;
+  min-width: 80px;
+}
+.zoomSlider {
+  flex: 1;
+  accent-color: #4f8ef7;
+  cursor: pointer;
+}
+.zoomSlider:disabled { opacity: 0.4; cursor: not-allowed; }
+.zoomReset {
+  width: 28px; height: 28px;
+  border-radius: 6px;
+  background: #22263a;
+  border: 1px solid #2e3350;
+  color: #8891b0;
+  cursor: pointer;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.zoomReset:disabled { opacity: 0.4; cursor: not-allowed; }
+.zoomNote {
+  font-size: 0.72rem;
+  color: #4a5078;
+  white-space: nowrap;
+}
+
+/* ── Capture button ─────────────────────────────────────────────────── */
+.captureBtn {
+  width: 100%;
+  max-width: 320px;
+  padding: 16px;
+  background: #4f8ef7;
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  font-size: 1.05rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.captureBtn:hover    { opacity: 0.85; }
+.captureBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.loading { color: #8891b0; font-size: 0.9rem; }
+
+/* ── Error state ─────────────────────────────────────────────────────── */
+.error {
+  background: #1a1d27;
+  border: 1px solid #ef444433;
+  border-radius: 12px;
+  padding: 24px 20px;
+  text-align: center;
+  width: 100%;
+}
+.errorTitle { font-size: 1.1rem; margin-bottom: 8px; }
+.errorMsg   { color: #fca5a5; margin-bottom: 10px; font-size: 0.9rem; }
+.errorHint  { color: #8891b0; font-size: 0.82rem; margin-bottom: 16px; line-height: 1.5; }
+.retryBtn {
+  padding: 10px 24px;
+  background: #4f8ef7;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+
+/* ── Debug panel ─────────────────────────────────────────────────────── */
+.debugPanel {
+  width: 100%;
+  background: #0f1117;
+  border: 1px solid #2e3350;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 0.78rem;
+  color: #4a5078;
+}
+.debugPanel summary { cursor: pointer; color: #8891b0; }
+.debugGrid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 3px 10px;
+  margin-top: 6px;
+}

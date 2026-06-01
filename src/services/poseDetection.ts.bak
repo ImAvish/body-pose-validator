@@ -1,0 +1,110 @@
+/**
+ * poseDetection.ts
+ * Wraps MediaPipe PoseLandmarker results into our internal landmark format.
+ *
+ * MediaPipe 33-landmark indices:
+ *  0  = nose
+ *  11 = left shoulder,  12 = right shoulder
+ *  13 = left elbow,     14 = right elbow
+ *  15 = left wrist,     16 = right wrist
+ *  23 = left hip,       24 = right hip
+ *  25 = left knee,      26 = right knee
+ *  27 = left ankle,     28 = right ankle
+ *  29 = left heel,      30 = right heel
+ *  31 = left foot index, 32 = right foot index
+ *
+ * Important: MediaPipe PoseLandmarker always returns its fixed 33 landmarks.
+ * There is no config option to make this model detect fewer landmarks.
+ * To use fewer points in our app, keep the 33-landmark result and only read the
+ * indices listed in LM / CORE_VALIDATION_LANDMARKS below. For a truly smaller
+ * output model, you need a custom pose model, not this MediaPipe .task model.
+ */
+
+import type { PoseLandmarkerResult } from '@mediapipe/tasks-vision';
+import type { NormalizedLandmark } from '../types/validation';
+
+export const LM = {
+  NOSE: 0,
+  LEFT_EYE: 2,
+  RIGHT_EYE: 5,
+  LEFT_EAR: 7,
+  RIGHT_EAR: 8,
+  MOUTH_LEFT: 9,
+  MOUTH_RIGHT: 10,
+  LEFT_SHOULDER: 11,
+  RIGHT_SHOULDER: 12,
+  LEFT_ELBOW: 13,
+  RIGHT_ELBOW: 14,
+  LEFT_WRIST: 15,
+  RIGHT_WRIST: 16,
+  LEFT_HIP: 23,
+  RIGHT_HIP: 24,
+  LEFT_KNEE: 25,
+  RIGHT_KNEE: 26,
+  LEFT_ANKLE: 27,
+  RIGHT_ANKLE: 28,
+  LEFT_HEEL: 29,
+  RIGHT_HEEL: 30,
+  LEFT_FOOT: 31,
+  RIGHT_FOOT: 32,
+} as const;
+
+// Main landmarks actually used by the validation rules. The model still returns
+// 33 points; this list just documents the smaller subset we consume.
+export const CORE_VALIDATION_LANDMARKS = [
+  LM.NOSE,
+  LM.LEFT_SHOULDER,
+  LM.RIGHT_SHOULDER,
+  LM.LEFT_ELBOW,
+  LM.RIGHT_ELBOW,
+  LM.LEFT_WRIST,
+  LM.RIGHT_WRIST,
+  LM.LEFT_HIP,
+  LM.RIGHT_HIP,
+  LM.LEFT_KNEE,
+  LM.RIGHT_KNEE,
+  LM.LEFT_ANKLE,
+  LM.RIGHT_ANKLE,
+  LM.LEFT_HEEL,
+  LM.RIGHT_HEEL,
+  LM.LEFT_FOOT,
+  LM.RIGHT_FOOT,
+] as const;
+
+/** Convert MediaPipe result landmarks to our format. */
+export function extractLandmarks(result: PoseLandmarkerResult): NormalizedLandmark[][] {
+  return result.landmarks.map((pose) =>
+    pose.map((lm) => ({
+      x: lm.x,
+      y: lm.y,
+      z: lm.z,
+      visibility: lm.visibility ?? 0,
+    }))
+  );
+}
+
+/** Return the pose with the highest average landmark visibility. */
+export function selectBestPose(poses: NormalizedLandmark[][]): NormalizedLandmark[] | null {
+  if (poses.length === 0) return null;
+  let best = poses[0];
+  let bestScore = averageVisibility(best);
+  for (let i = 1; i < poses.length; i++) {
+    const s = averageVisibility(poses[i]);
+    if (s > bestScore) { best = poses[i]; bestScore = s; }
+  }
+  return best;
+}
+
+function averageVisibility(landmarks: NormalizedLandmark[]): number {
+  if (landmarks.length === 0) return 0;
+  const sum = landmarks.reduce((acc, lm) => acc + (lm.visibility ?? 0), 0);
+  return sum / landmarks.length;
+}
+
+/** Check if a specific landmark is visible above the threshold. */
+export function isVisible(lm: NormalizedLandmark, threshold: number): boolean {
+  return (lm.visibility ?? 0) >= threshold;
+}
+
+// Re-export detectPose so consumers can import from a single module
+export { detectPose } from './modelLoader';

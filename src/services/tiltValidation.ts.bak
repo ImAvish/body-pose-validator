@@ -1,0 +1,103 @@
+/**
+ * tiltValidation.ts
+ * Camera tilt / roll validation derived from pose landmarks.
+ *
+ * Threshold config: src/config/validationConfig.ts → tilt section
+ *   warningTiltDeg          : tilt below this → silent (no message)
+ *   maxShoulderTiltDeg      : tilt above this → error (blocked)
+ *   maxHipLineTiltDeg       : hip-line tilt above this → warning
+ *   maxBodyAxisDeviationDeg : body-axis lean above this → warning
+ *
+ * Behaviour bands (example with default values):
+ *   0–8 deg  : accepted silently
+ *   8–14 deg : warning shown but not blocked
+ *   > 14 deg : error — user is blocked
+ */
+
+import type { NormalizedLandmark, ValidationError } from '../types/validation';
+import type { AppConfig } from '../types/models';
+import { LM, isVisible } from './poseDetection';
+import { shoulderTiltDeg, bodyAxisTiltDeg, angleDeg } from '../utils/geometryUtils';
+
+export interface TiltResult {
+  shoulderTilt: number;
+  hipLineTilt: number;
+  bodyAxisDeviation: number;
+  errors: ValidationError[];
+  warnings: ValidationError[];
+}
+
+export function validateTilt(
+  landmarks: NormalizedLandmark[],
+  config: AppConfig
+): TiltResult {
+  const errors: ValidationError[] = [];
+  const warnings: ValidationError[] = [];
+  const minVis = config.confidence.minLandmarkVisibility;
+
+  const lShoulder = landmarks[LM.LEFT_SHOULDER];
+  const rShoulder = landmarks[LM.RIGHT_SHOULDER];
+  const lHip      = landmarks[LM.LEFT_HIP];
+  const rHip      = landmarks[LM.RIGHT_HIP];
+
+  const hasShoulders =
+    isVisible(lShoulder, minVis) && isVisible(rShoulder, minVis);
+  const hasHips =
+    isVisible(lHip, minVis) && isVisible(rHip, minVis);
+
+  const shoulderTilt =
+    hasShoulders ? Math.abs(shoulderTiltDeg(lShoulder, rShoulder)) : 0;
+  const hipLineTilt =
+    hasHips ? Math.abs(angleDeg(lHip, rHip)) : 0;
+  const bodyAxisDeviation =
+    hasShoulders && hasHips
+      ? bodyAxisTiltDeg(lShoulder, rShoulder, lHip, rHip)
+      : 0;
+
+  const {
+    warningTiltDeg,
+    maxShoulderTiltDeg,
+    maxHipLineTiltDeg,
+    maxBodyAxisDeviationDeg,
+  } = config.tilt;
+
+  // Shoulder-line tilt — three-tier logic
+  if (hasShoulders) {
+    if (shoulderTilt > maxShoulderTiltDeg) {
+      // Tier 3: error — blocked
+      errors.push({
+        code: 'CAMERA_TILTED',
+        message: 'The camera seems tilted. Please keep the phone straight and level.',
+        severity: 'error',
+      });
+    } else if (shoulderTilt > warningTiltDeg) {
+      // Tier 2: warning — allowed but flagged
+      warnings.push({
+        code: 'CAMERA_SLIGHTLY_TILTED',
+        message: 'The camera is slightly tilted. Try to hold the phone straight for the best result.',
+        severity: 'warning',
+      });
+    }
+    // Tier 1 (below warningTiltDeg): silent — do nothing
+  }
+
+  // Hip-line tilt warning
+  if (hasHips && hipLineTilt > maxHipLineTiltDeg) {
+    warnings.push({
+      code: 'HIP_LINE_TILTED',
+      message: 'Your hips appear tilted. Try to stand with equal weight on both feet.',
+      severity: 'warning',
+    });
+  }
+
+  // Body-axis lean warning
+  if (hasShoulders && hasHips && bodyAxisDeviation > maxBodyAxisDeviationDeg) {
+    warnings.push({
+      code: 'BODY_LEANING',
+      message: 'Please stand straight. Avoid leaning, bending, or swaying.',
+      severity: 'warning',
+    });
+  }
+
+  return { shoulderTilt, hipLineTilt, bodyAxisDeviation, errors, warnings };
+}

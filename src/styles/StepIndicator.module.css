@@ -1,0 +1,39 @@
+/* StepIndicator.module.css */
+.container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  padding: 12px 0;
+}
+
+.stepWrapper {
+  display: flex;
+  align-items: center;
+}
+
+.step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  transition: all 0.2s;
+}
+
+.icon { font-size: 1.25rem; }
+.label { font-size: 0.7rem; font-weight: 500; white-space: nowrap; }
+
+.pending  { color: #4a5078; }
+.active   { color: #4f8ef7; background: rgba(79,142,247,0.12); }
+.done     { color: #22c55e; }
+
+.connector {
+  width: 24px;
+  height: 2px;
+  background: #2e3350;
+  margin: 0 2px;
+  border-radius: 1px;
+}
+.connectorDone { background: #22c55e; }

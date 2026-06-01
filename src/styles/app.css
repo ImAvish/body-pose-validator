@@ -1,0 +1,198 @@
+/* ── Reset & Base ─────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #0f1117;
+  --surface: #1a1d27;
+  --surface2: #22263a;
+  --border: #2e3350;
+  --accent: #4f8ef7;
+  --accent-dim: #2a4fa0;
+  --success: #22c55e;
+  --error: #ef4444;
+  --warning: #f59e0b;
+  --text: #e8eaf6;
+  --text-dim: #8891b0;
+  --radius: 12px;
+  --radius-sm: 8px;
+}
+
+html, body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-tap-highlight-color: transparent;
+  overflow-x: hidden;
+}
+
+#root { height: 100%; }
+
+/* ── App shell ────────────────────────────────────────────────────────────── */
+.app-shell {
+  max-width: 480px;
+  margin: 0 auto;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px 12px 32px;
+}
+
+.app-shell.centered {
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+/* ── Model loading / error ────────────────────────────────────────────────── */
+.model-loading, .model-error {
+  background: var(--surface);
+  border-radius: var(--radius);
+  padding: 32px 24px;
+  max-width: 380px;
+  border: 1px solid var(--border);
+}
+
+.model-loading h2, .model-error h2 { margin-bottom: 12px; font-size: 1.25rem; }
+.model-loading p, .model-error p { color: var(--text-dim); margin-bottom: 8px; }
+.model-loading .hint { font-size: 0.85rem; color: var(--text-dim); margin-top: 16px; }
+.model-error ol { text-align: left; margin: 12px 0 12px 20px; color: var(--text-dim); }
+.model-error ol li { margin-bottom: 6px; }
+.model-error button {
+  margin-top: 16px;
+  padding: 10px 24px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+code {
+  background: var(--surface2);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.85em;
+  font-family: 'Consolas', monospace;
+}
+
+/* ── Spinner ──────────────────────────────────────────────────────────────── */
+.spinner {
+  display: inline-block;
+  width: 20px; height: 20px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-bottom: 12px;
+}
+.spinner.large { width: 40px; height: 40px; border-width: 3px; }
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Step header ──────────────────────────────────────────────────────────── */
+.step-header h2 { font-size: 1.25rem; margin-bottom: 4px; }
+.step-instructions { color: var(--text-dim); font-size: 0.9rem; }
+
+/* ── Mode toggle ──────────────────────────────────────────────────────────── */
+.mode-toggle {
+  display: flex;
+  gap: 8px;
+}
+.mode-btn {
+  flex: 1;
+  padding: 10px;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-dim);
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.mode-btn.active {
+  background: var(--accent-dim);
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+/* ── Gallery area ─────────────────────────────────────────────────────────── */
+.gallery-area {
+  background: var(--surface);
+  border-radius: var(--radius);
+  padding: 24px;
+  text-align: center;
+  border: 2px dashed var(--border);
+}
+.gallery-prompt { margin-bottom: 16px; color: var(--text-dim); }
+
+/* ── Captured image area ──────────────────────────────────────────────────── */
+.captured-area {
+  width: 100%;
+}
+
+/* ── Action row ───────────────────────────────────────────────────────────── */
+.action-row {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.btn-primary {
+  padding: 14px 32px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius);
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.btn-primary:hover { opacity: 0.85; }
+
+.btn-secondary {
+  padding: 12px 24px;
+  background: var(--surface2);
+  color: var(--text);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.btn-secondary:hover { background: var(--surface); }
+
+/* ── Accepted front preview (during side step) ────────────────────────────── */
+.accepted-front {
+  margin-top: 8px;
+  opacity: 0.8;
+}
+.accepted-label {
+  font-size: 0.85rem;
+  color: var(--success);
+  margin-bottom: 6px;
+}
+
+/* ── Success screen ───────────────────────────────────────────────────────── */
+.success-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  text-align: center;
+  padding: 8px 0;
+}
+.success-title { font-size: 1.5rem; }
+.success-sub { color: var(--text-dim); }
+.success-previews {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+  width: 100%;
+}

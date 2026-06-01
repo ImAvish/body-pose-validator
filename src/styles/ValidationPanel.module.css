@@ -1,0 +1,101 @@
+/* ValidationPanel.module.css */
+.panel {
+  background: #1a1d27;
+  border: 1px solid #2e3350;
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.loading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #8891b0;
+  font-size: 0.95rem;
+}
+
+.spinner {
+  display: inline-block;
+  width: 18px; height: 18px;
+  border: 2px solid #2e3350;
+  border-top-color: #4f8ef7;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 1rem;
+  padding: 10px 12px;
+  border-radius: 8px;
+}
+.statusIcon { font-size: 1.2rem; }
+.valid   { background: rgba(34,197,94,0.12); color: #22c55e; }
+.invalid { background: rgba(239,68,68,0.10); color: #ef4444; }
+
+.errorList, .warningList {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.errorItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+.errorItem.error   { background: rgba(239,68,68,0.10); color: #fca5a5; }
+.errorItem.warning { background: rgba(245,158,11,0.10); color: #fcd34d; }
+.errorIcon { flex-shrink: 0; margin-top: 1px; }
+
+.warningItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  background: rgba(245,158,11,0.10);
+  color: #fcd34d;
+}
+
+.hint { font-size: 0.85rem; color: #8891b0; text-align: center; }
+
+.debug {
+  margin-top: 8px;
+  font-size: 0.75rem;
+  color: #4a5078;
+}
+.debug pre {
+  background: #0f1117;
+  padding: 8px;
+  border-radius: 6px;
+  overflow-x: auto;
+  max-height: 200px;
+  margin-top: 6px;
+}
+
+/* Debug metrics grid */
+.metricsGrid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 3px 12px;
+  margin-top: 6px;
+  font-size: 0.78rem;
+  color: #8891b0;
+}
+.metricsGrid span:nth-child(odd)  { color: #4a5078; }
+.metricsGrid span:nth-child(even) { font-variant-numeric: tabular-nums; }

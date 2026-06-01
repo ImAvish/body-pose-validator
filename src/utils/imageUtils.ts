@@ -1,0 +1,91 @@
+/**
+ * imageUtils.ts
+ * Utilities for converting between image sources and canvas/pixel data.
+ */
+
+/** Draw any image-like source onto a new canvas and return it. */
+export function imageToCanvas(
+  source: HTMLImageElement | HTMLVideoElement | HTMLCanvasElement,
+  maxSize = 640
+): HTMLCanvasElement {
+  const canvas = document.createElement('canvas');
+
+  let srcW: number, srcH: number;
+  if (source instanceof HTMLVideoElement) {
+    srcW = source.videoWidth || source.width;
+    srcH = source.videoHeight || source.height;
+  } else if (source instanceof HTMLImageElement) {
+    srcW = source.naturalWidth || source.width;
+    srcH = source.naturalHeight || source.height;
+  } else {
+    srcW = source.width;
+    srcH = source.height;
+  }
+
+  // Scale down for performance while keeping aspect ratio
+  const scale = Math.min(1, maxSize / Math.max(srcW, srcH));
+  canvas.width = Math.round(srcW * scale);
+  canvas.height = Math.round(srcH * scale);
+
+  const ctx = canvas.getContext('2d')!;
+  ctx.drawImage(source, 0, 0, canvas.width, canvas.height);
+  return canvas;
+}
+
+/** Get raw RGBA pixel data from a canvas. */
+export function getPixelData(canvas: HTMLCanvasElement): ImageData {
+  const ctx = canvas.getContext('2d')!;
+  return ctx.getImageData(0, 0, canvas.width, canvas.height);
+}
+
+/**
+ * Compute per-pixel luminance (ITU-R BT.601) and return:
+ *  - averageLuminance  (0–255)
+ *  - overexposedRatio  (fraction of pixels with luminance > 245)
+ */
+export function computeLuminanceStats(imageData: ImageData): {
+  averageLuminance: number;
+  overexposedRatio: number;
+} {
+  const { data, width, height } = imageData;
+  const total = width * height;
+  let sum = 0;
+  let overexposed = 0;
+
+  for (let i = 0; i < data.length; i += 4) {
+    const r = data[i];
+    const g = data[i + 1];
+    const b = data[i + 2];
+    // BT.601 luma
+    const luma = 0.299 * r + 0.587 * g + 0.114 * b;
+    sum += luma;
+    if (luma > 245) overexposed++;
+  }
+
+  return {
+    averageLuminance: sum / total,
+    overexposedRatio: overexposed / total,
+  };
+}
+
+/** Convert a File or Blob to an HTMLImageElement (resolves when loaded). */
+export function fileToImageElement(file: File): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      resolve(img);
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error('Failed to load image file'));
+    };
+    img.src = url;
+  });
+}
+
+/** Convert a canvas to a data-URL (for preview display). */
+export function canvasToDataUrl(canvas: HTMLCanvasElement, quality = 0.9): string {
+  return canvas.toDataURL('image/jpeg', quality);
+}
